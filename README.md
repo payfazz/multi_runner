@@ -9,3 +9,9 @@ If one of the sub-process exited with non-zero status code, or killed by signal,
 It should be the supervisor responsibility to restart the service.
 
 It suitable for docker container. For PID1 please use [docker_pid1](https://github.com/win-t/docker_pid1)
+
+## how to install
+for now, we don't publish it to npm repository, but you still can install this package via
+```
+npm install git+ssh://git@github.com:payfazz/multi_runner.git
+```
