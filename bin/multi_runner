@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+
+const cluster = require('cluster');
+const Console = require('console').Console;
+const EventEmitter = require('events');
+const Transform = require('stream').Transform;
+
+const numCPUs = require('os').cpus().length;
+
+let workers = {};
+
+let prefixer = (prefix) => new Transform({
+  decodeStrings: false,
+  transform(chunk, enc, cb) { this.push(prefix); this.push(chunk); cb(); },
+});
+
+let logger = (() => {
+  let prefix = Buffer.from(`<${process.pid.toString().padStart(5, '0')}> `);
+  let out = prefixer(prefix);
+  out.pipe(process.stdout);
+  let err = prefixer(prefix);
+  err.pipe(process.stderr);
+  return new Console(out, err);
+})();
+
+if(process.argv.length < 3) {
+  logger.error('please specify the node application to run');
+  process.exit(1);
+}
+
+const APPLICATION = process.argv[2];
+
+let exitEvent = new EventEmitter();
+let exitCode = -1;
+
+exitEvent.once('exit_begin', (msg, code) => {
+  if(code != 0) logger.error(msg);
+  else          logger.log(msg);
+  exitCode = code;
+  for(let worker of Object.values(workers)) worker.disconnect();
+  setTimeout(() => {
+    for(let worker of Object.values(workers)) worker.kill('SIGKILL');
+  }, 10000).unref();
+});
+
+exitEvent.once('exit_complete', () => {
+  if(exitCode == -1) exitCode = 0;
+  process.exit(exitCode)
+})
+
+logger.log(`spawning ${numCPUs} worker`);
+cluster.setupMaster({ exec: APPLICATION, silent: true });
+let counter = 0;
+(function spawn() {
+  counter++;
+  let worker = cluster.fork();
+  let pid = worker.process.pid;
+  workers[pid] = worker;
+
+  let prefix = Buffer.from(`[${pid.toString().padStart(5, '0')}] `);
+  worker.process.stdout.pipe(prefixer(prefix)).pipe(process.stdout);
+  worker.process.stderr.pipe(prefixer(prefix)).pipe(process.stderr);
+
+  worker.once('exit', (code, signal) => {
+    delete workers[pid];
+    let pidStr = pid.toString().padStart(5, '0');
+    logger.log(`worker ${pidStr} exited`);
+    if(!(code == 0 && !signal)) {
+      // if one worker crash, it mean the entire cluster is crash
+      // supervisor should restart the entire cluster
+      exitEvent.emit('exit_begin', `worker ${pidStr} is crashed {code=${code}, signal=${signal}}`, 1);
+    }
+    if(Object.keys(workers).length == 0) exitEvent.emit('exit_complete');
+  });
+
+  // don't spawn worker too fast, one maybe crash after started
+  setTimeout(() => {
+    if(counter < numCPUs && exitCode == -1) spawn();
+  }, 500).unref();
+})();
+
+// broadcast message to all workers
+cluster.on('message', (worker, message) => {
+  for(let worker of Object.values(workers)) worker.send(message);
+});
+
+process.on('SIGTERM', () => exitEvent.emit('exit_begin', 'got SIGTERM', 0));
+process.on('SIGINT',  () => exitEvent.emit('exit_begin', 'got SIGINT', 0));

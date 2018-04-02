@@ -1,0 +1,10 @@
+{
+  "name": "multi_runner",
+  "version": "1.0.0",
+  "description": "Run nodejs application on multicore processor",
+  "author": "Win <win@payfazz.com>",
+  "license": "MIT",
+  "bin": {
+    "multi_runner": "./bin/multi_runner"
+  }
+}
