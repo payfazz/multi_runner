@@ -7,6 +7,9 @@ const Transform = require('stream').Transform;
 
 const numCPUs = require('os').cpus().length;
 
+process.stdout.setMaxListeners(process.stdout.getMaxListeners() + numCPUs);
+process.stderr.setMaxListeners(process.stderr.getMaxListeners() + numCPUs);
+
 let workers = {};
 
 let prefixer = (prefix) => new Transform({
@@ -37,7 +40,7 @@ exitEvent.once('exit_begin', (msg, code) => {
   if(code != 0) logger.error(msg);
   else          logger.log(msg);
   exitCode = code;
-  for(let worker of Object.values(workers)) worker.disconnect();
+  for(let worker of Object.values(workers)) worker.kill();
   setTimeout(() => {
     for(let worker of Object.values(workers)) worker.kill('SIGKILL');
   }, 10000).unref();
@@ -51,6 +54,7 @@ exitEvent.once('exit_complete', () => {
 logger.log(`spawning ${numCPUs} worker`);
 cluster.setupMaster({ exec: APPLICATION, silent: true });
 let counter = 0;
+let spanwDelay = 1000;
 (function spawn() {
   counter++;
   let worker = cluster.fork();
@@ -68,7 +72,7 @@ let counter = 0;
     if(!(code == 0 && !signal)) {
       // if one worker crash, it mean the entire cluster is crash
       // supervisor should restart the entire cluster
-      exitEvent.emit('exit_begin', `worker ${pidStr} is crashed {code=${code}, signal=${signal}}`, 1);
+      exitEvent.emit('exit_begin', `worker ${pidStr} is crashed {code=${code}, signal=${signal}}, killing others worker`, 1);
     }
     if(Object.keys(workers).length == 0) exitEvent.emit('exit_complete');
   });
@@ -76,7 +80,8 @@ let counter = 0;
   // don't spawn worker too fast, one maybe crash after started
   setTimeout(() => {
     if(counter < numCPUs && exitCode == -1) spawn();
-  }, 500).unref();
+  }, spanwDelay).unref();
+  spanwDelay = Math.floor(spanwDelay/numCPUs);
 })();
 
 // broadcast message to all workers
