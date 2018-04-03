@@ -32,6 +32,7 @@ if(process.argv.length < 3) {
 }
 
 const APPLICATION = process.argv[2];
+const ARGS = process.argv.slice(3);
 
 let exitEvent = new EventEmitter();
 let exitCode = -1;
@@ -52,7 +53,7 @@ exitEvent.once('exit_complete', () => {
 })
 
 logger.log(`spawning ${numCPUs} worker`);
-cluster.setupMaster({ exec: APPLICATION, silent: true });
+cluster.setupMaster({ exec: APPLICATION, args: ARGS, silent: true });
 let counter = 0;
 let spanwDelay = 1000;
 (function spawn() {
