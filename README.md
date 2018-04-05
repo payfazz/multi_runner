@@ -20,3 +20,10 @@ using npm registry
 ```
 npm install multi_runner
 ```
+
+# how to use
+let's say the script is `server.js`
+```sh
+$ export PATH=$PWD/node_modules/.bin:$PATH
+$ multi_runner server.js
+```
