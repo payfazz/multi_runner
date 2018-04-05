@@ -4,6 +4,10 @@
   "description": "Run nodejs application on multicore processor",
   "author": "Win <win@payfazz.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/payfazz/multi_runner.git"
+  },
   "bin": {
     "multi_runner": "./bin/multi_runner"
   }
