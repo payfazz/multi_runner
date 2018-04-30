@@ -5,10 +5,11 @@ const Console = require('console').Console;
 const EventEmitter = require('events');
 const Transform = require('stream').Transform;
 
-const numCPUs = require('os').cpus().length;
+const clusterSize = require('os').cpus().length;
+process.env["NODE_CLUSTER_SIZE"] = clusterSize;
 
-process.stdout.setMaxListeners(process.stdout.getMaxListeners() + numCPUs);
-process.stderr.setMaxListeners(process.stderr.getMaxListeners() + numCPUs);
+process.stdout.setMaxListeners(process.stdout.getMaxListeners() + clusterSize);
+process.stderr.setMaxListeners(process.stderr.getMaxListeners() + clusterSize);
 
 let workers = {};
 
@@ -52,7 +53,7 @@ exitEvent.once('exit_complete', () => {
   process.exit(exitCode)
 })
 
-logger.log(`spawning ${numCPUs} worker`);
+logger.log(`spawning ${clusterSize} worker`);
 cluster.setupMaster({ exec: APPLICATION, args: ARGS, silent: true });
 let counter = 0;
 let spanwDelay = 1000;
@@ -80,9 +81,9 @@ let spanwDelay = 1000;
 
   // don't spawn worker too fast, one maybe crash after started
   setTimeout(() => {
-    if(counter < numCPUs && exitCode == -1) spawn();
+    if(counter < clusterSize && exitCode == -1) spawn();
   }, spanwDelay).unref();
-  spanwDelay = Math.floor(spanwDelay/numCPUs);
+  spanwDelay = 0;
 })();
 
 // broadcast message to all workers
