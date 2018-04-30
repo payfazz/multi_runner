@@ -13,7 +13,7 @@ It suitable for docker container. For PID1 please use [docker_pid1](https://gith
 ## how to install
 using git
 ```
-npm install git+ssh://git@github.com:payfazz/multi_runner.git
+npm install git+https://git@github.com/payfazz/multi_runner.git
 ```
 
 using npm registry
