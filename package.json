@@ -1,6 +1,6 @@
 {
   "name": "multi_runner",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Run nodejs application on multicore processor",
   "author": "Win <win@payfazz.com>",
   "license": "MIT",
@@ -10,5 +10,9 @@
   },
   "bin": {
     "multi_runner": "./bin/multi_runner"
+  },
+  "devDependencies": {
+    "babel-eslint": "^8.2.3",
+    "eslint": "^4.19.1"
   }
 }

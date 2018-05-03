@@ -6,7 +6,7 @@ const EventEmitter = require('events');
 const Transform = require('stream').Transform;
 
 const clusterSize = require('os').cpus().length;
-process.env["NODE_CLUSTER_SIZE"] = clusterSize;
+process.env['NODE_CLUSTER_SIZE'] = clusterSize;
 
 process.stdout.setMaxListeners(process.stdout.getMaxListeners() + clusterSize);
 process.stderr.setMaxListeners(process.stderr.getMaxListeners() + clusterSize);
@@ -50,8 +50,8 @@ exitEvent.once('exit_begin', (msg, code) => {
 
 exitEvent.once('exit_complete', () => {
   if(exitCode == -1) exitCode = 0;
-  process.exit(exitCode)
-})
+  process.exit(exitCode);
+});
 
 logger.log(`spawning ${clusterSize} worker`);
 cluster.setupMaster({ exec: APPLICATION, args: ARGS, silent: true });
