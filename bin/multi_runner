@@ -35,22 +35,22 @@ if(process.argv.length < 3) {
 const APPLICATION = process.argv[2];
 const ARGS = process.argv.slice(3);
 
-let exitEvent = new EventEmitter();
-let exitCode = -1;
+let controlEvent = new EventEmitter();
+let savedExitCode = -1;
 
-exitEvent.once('exit_begin', (msg, code) => {
+controlEvent.once('kill_all_workers', (msg, code) => {
   if(code != 0) logger.error(msg);
   else          logger.log(msg);
-  exitCode = code;
+  savedExitCode = code;
   for(let worker of Object.values(workers)) worker.kill();
   setTimeout(() => {
     for(let worker of Object.values(workers)) worker.kill('SIGKILL');
   }, 10000).unref();
 });
 
-exitEvent.once('exit_complete', () => {
-  if(exitCode == -1) exitCode = 0;
-  process.exit(exitCode);
+controlEvent.once('workers_done', () => {
+  if(savedExitCode == -1) savedExitCode = 0;
+  setImmediate(() => process.exit(savedExitCode));
 });
 
 logger.log(`spawning ${clusterSize} worker`);
@@ -74,14 +74,14 @@ let spanwDelay = 1000;
     if(!(code == 0 && !signal)) {
       // if one worker crash, it mean the entire cluster is crash
       // supervisor should restart the entire cluster
-      exitEvent.emit('exit_begin', `worker ${pidStr} is crashed {code=${code}, signal=${signal}}, killing others worker`, 1);
+      controlEvent.emit('kill_all_workers', `worker ${pidStr} is crashed {code=${code}, signal=${signal}}, killing others worker`, 1);
     }
-    if(Object.keys(workers).length == 0) exitEvent.emit('exit_complete');
+    if(Object.keys(workers).length == 0) controlEvent.emit('workers_done');
   });
 
   // don't spawn worker too fast, one maybe crash after started
   setTimeout(() => {
-    if(counter < clusterSize && exitCode == -1) spawn();
+    if(counter < clusterSize && savedExitCode == -1) spawn();
   }, spanwDelay).unref();
   spanwDelay = 0;
 })();
@@ -91,5 +91,5 @@ cluster.on('message', (worker, message) => {
   for(let worker of Object.values(workers)) worker.send(message);
 });
 
-process.on('SIGTERM', () => exitEvent.emit('exit_begin', 'got SIGTERM', 0));
-process.on('SIGINT',  () => exitEvent.emit('exit_begin', 'got SIGINT', 0));
+process.once('SIGTERM', () => controlEvent.emit('kill_all_workers', 'got SIGTERM', 0));
+process.once('SIGINT',  () => controlEvent.emit('kill_all_workers', 'got SIGINT', 0));
