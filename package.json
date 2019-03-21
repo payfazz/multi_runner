@@ -12,7 +12,7 @@
     "multi_runner": "./bin/multi_runner"
   },
   "devDependencies": {
-    "babel-eslint": "^8.2.3",
+    "babel-eslint": "^8.2.6",
     "eslint": "^4.19.1"
   }
 }
